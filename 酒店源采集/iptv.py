@@ -12,7 +12,7 @@ import replace
 import fileinput
 
 #  获取远程港澳台直播源文件
-url = "https://gh.tryxd.cn/https://raw.githubusercontent.com/Fairy8o/IPTV/main/DIYP-v4.txt"          #源采集地址
+url = "https://smart.pendy.dpdns.org/m3u/Smart.m3u"          #源采集地址
 r = requests.get(url)
 open('DIYP-v4.txt','wb').write(r.content)         #打开源文件并临时写入
 
