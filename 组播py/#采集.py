@@ -7,12 +7,6 @@ import datetime
 from datetime import datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-import time
-
-# 设置请求头，模拟浏览器访问
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-}
 
 # 获取rtp目录下的文件名
 files = os.listdir('rtp')
@@ -45,7 +39,7 @@ for province_isp in provinces_isps:
                 mcast = first_line.split("rtp://")[1].split(" ")[0]
                 keywords.append(province_isp + "_" + mcast)
     except FileNotFoundError:
-        # 如果文件不存在，则捕获 FileNotFoundError 异常并打印提示信息
+    # 如果文件不存在，则捕获 FileNotFoundError 异常并打印提示信息
         print(f"文件 '{province_isp}.txt' 不存在. 跳过此文件.")
 
 for keyword in keywords:
@@ -62,8 +56,11 @@ for keyword in keywords:
         org = "Chinanet"
         isp_en = "ctcc"
     elif isp == "移动":
-        org = "China Mobile communications corporation"
+        org == "China Mobile communications corporation"
         isp_en = "cmcc"
+        
+#    else:
+#        org = ""
 
     current_time = datetime.now()
     timeout_cnt = 0
@@ -72,15 +69,13 @@ for keyword in keywords:
         try:
             search_url = 'https://fofa.info/result?qbase64='
             search_txt = f'\"udpxy\" && country=\"CN\" && region=\"{province}\" && org=\"{org}\"'
-            # 将字符串编码为字节流
+                # 将字符串编码为字节流
             bytes_string = search_txt.encode('utf-8')
-            # 使用 base64 进行编码
+                # 使用 base64 进行编码
             search_txt = base64.b64encode(bytes_string).decode('utf-8')
             search_url += search_txt
             print(f"{current_time} 查询运营商 : {province}{isp} ，查询网址 : {search_url}")
-            
-            # 发送带请求头的请求
-            response = requests.get(search_url, headers=headers, timeout=30)
+            response = requests.get(search_url, timeout=30)
             # 处理响应
             response.raise_for_status()
             # 检查请求是否成功
@@ -101,65 +96,23 @@ for keyword in keywords:
             # 遍历所有视频链接
             for url in result_urls:
                 video_url = url + "/rtp/" + mcast
-                print(f"{current_time} 尝试连接: {video_url}")
-                
-                # 增加重试机制
-                max_tries = 3
-                for attempt in range(max_tries):
-                    try:
-                        # 用OpenCV读取视频，设置超时参数
-                        cap = cv2.VideoCapture(video_url)
-                        
-                        # 等待一段时间，让视频流有足够的时间建立连接
-                        retries = 5
-                        for i in range(retries):
-                            if cap.isOpened():
-                                break
-                            time.sleep(1)
-                        
-                        # 检查视频是否成功打开
-                        if not cap.isOpened():
-                            print(f"{current_time} 尝试 {attempt+1}/{max_tries}: {video_url} 无效")
-                            raise Exception("无法打开视频流")
-                        
-                        # 读取视频的宽度和高度
-                        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        
-                        # 读取几帧进行验证
-                        frames_read = 0
-                        valid_frames = 0
-                        max_frames_to_read = 5
-                        
-                        while frames_read < max_frames_to_read:
-                            ret, frame = cap.read()
-                            if not ret:
-                                print(f"{current_time} 读取帧失败，可能是流已结束或损坏")
-                                break
-                            
-                            frames_read += 1
-                            if frame is not None and frame.size > 0:
-                                valid_frames += 1
-                        
-                        if valid_frames > 0:
-                            print(f"{current_time} {video_url} 有效，分辨率: {width}x{height}")
-                            valid_ips.append(url)
-                        else:
-                            print(f"{current_time} {video_url} 没有有效的视频帧")
-                        
-                        break  # 成功尝试后跳出重试循环
-                        
-                    except Exception as e:
-                        print(f"{current_time} 尝试 {attempt+1}/{max_tries}: {video_url} 异常: {str(e)}")
-                        if attempt == max_tries - 1:
-                            print(f"{current_time} {video_url} 经过多次尝试仍失败")
-                    finally:
-                        # 确保释放资源
-                        if 'cap' in locals() and cap.isOpened():
-                            cap.release()
-                    
-                    # 每次尝试之间添加延迟
-                    time.sleep(2)
+
+                # 用OpenCV读取视频
+                cap = cv2.VideoCapture(video_url)
+
+                # 检查视频是否成功打开
+                if not cap.isOpened():
+                    print(f"{current_time} {video_url} 无效")
+                else:
+                    # 读取视频的宽度和高度
+                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    print(f"{current_time} {video_url} 的分辨率为 {width}x{height}")
+                    # 检查分辨率是否大于0
+                    if width > 0 and height > 0:
+                        valid_ips.append(url)
+                    # 关闭视频流
+                    cap.release()
                     
             if valid_ips:
                 #生成节目列表 省份运营商.txt
@@ -276,13 +229,8 @@ for keyword in keywords:
             timeout_cnt += 1
             print(f"{current_time} [{province}]搜索请求发生超时，异常次数：{timeout_cnt}")
             if timeout_cnt <= 5:
-                # 继续下一次循环迭代
-                time.sleep(3)  # 增加延迟时间
+                    # 继续下一次循环迭代
                 continue
             else:
                 print(f"{current_time} 搜索IPTV频道源[]，超时次数过多：{timeout_cnt} 次，停止处理")
-        except Exception as e:
-            print(f"{current_time} 发生未知异常: {str(e)}")
-            time.sleep(3)
-
 print('节目表制作完成！ 文件输出在当前文件夹！')
